@@ -14,36 +14,21 @@ def run_tournament(user_bot, all_possible_opponents, iterations=100):
     worst_match = None
     all_matches_metadata = []
     
-    # Initialize best/worst scores
-    # Stack is the primary metric. Initial stack is 10000.
+    # Track best/worst results (initial stack 10000)
     best_stack = -1
     worst_stack = float('inf')
 
     for i in range(iterations):
-        # Select 5 random opponents
-        # If fewer than 5 available, take all of them.
+        # Select up to 5 random opponents
         num_opponents = min(5, len(all_possible_opponents))
         selected_opponents = random.sample(all_possible_opponents, num_opponents)
         
-        # Prepare the list of bots for this match: User Bot + Opponents
-        # We need objects that have .name and .file.path attributes (or similar structure)
-        # to be compatible with existing logic.
-        # But 'all_possible_opponents' passed from view might be dicts or objects.
-        # Let's standardize on a simple structure for local processing.
-        
+        # Prepare bots list (User Bot + Opponents)
         current_match_bots = []
         
-        # Add user bot
-        current_match_bots.append({
-            'name': user_bot.name,
-            'path': user_bot.file.path
-        })
-        
-        # Add opponents
-        for opp in selected_opponents:
-            current_match_bots.append(opp)
+        current_match_bots.append({'name': user_bot.name, 'path': user_bot.file.path})
+        current_match_bots.extend(selected_opponents)
 
-        # Setup for a single match
         bot_instances = []
         checks = []
         
@@ -53,10 +38,8 @@ def run_tournament(user_bot, all_possible_opponents, iterations=100):
             checks.append(chk)
 
         if not all(checks):
-             # Log error or skip
              continue
 
-        # Config: max_round=3 as per original play_test_match, initial_stack=10000
         config = setup_config(max_round=50, initial_stack=10000, small_blind_amount=250)
         for bot_info, instance in zip(current_match_bots, bot_instances):
             config.register_player(name=bot_info['name'], algorithm=instance)
@@ -64,19 +47,15 @@ def run_tournament(user_bot, all_possible_opponents, iterations=100):
         output_file = "poker_output.txt"
 
         result, success = redirect_stdout_to_file(config, output_file)
-        
-        # Parse output
         replay_data, error = read_output_file_and_parse(output_file)
         
         if replay_data == "Invalid amount":
              continue
 
-        # Extract Rounds Data
         rounds_data = []
         previous_stack = {b['name']: 10000 for b in current_match_bots}
         
         current_match_winner = None
-        
         final_stacks = {}
         if isinstance(result, dict) and "players" in result:
              for player in result["players"]:
@@ -84,7 +63,6 @@ def run_tournament(user_bot, all_possible_opponents, iterations=100):
         
         current_match_winner = max(final_stacks, key=final_stacks.get) if final_stacks else "No one"
         
-        # Process rounds for replay
         bot_wins = {b['name']: 0 for b in current_match_bots} 
 
         for round_num in range(len(replay_data["rounds"])):
@@ -154,12 +132,6 @@ def run_tournament(user_bot, all_possible_opponents, iterations=100):
                 })
         
         user_stack = final_stacks.get(user_bot.name, 0)
-        
-        # Snapshot of this match for DB saving
-        # We need to map the bot names back to TestBot IDs if possible, or just store names in metadata
-        # For the TestMatch model, we need 'players' as ManyToMany TestBot objects.
-        # This is tricky because we are dynamically picking opponents that might not be TestBot objects in DB yet?
-        # Ideally, 'views.py' should ensure all potential opponents are TestBots.
         
         match_info = {
             'winner': current_match_winner,

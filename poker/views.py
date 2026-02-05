@@ -21,7 +21,6 @@ def register(request):
         password = request.POST.get('password')
         confirmPassword = request.POST.get('confirmPassword')
 
-        # Check if passwords match
         if password != confirmPassword:
             messages.error(request, "Passwords do not match!")
             return redirect('/login/')
@@ -39,12 +38,10 @@ def register(request):
             messages.error(request, "Password must contain at least one uppercase letter.")
             return redirect('/login/')
 
-        # Check if the username already exists
         if User.objects.filter(username=username).exists():
             messages.info(request, "Username already taken!")
             return redirect('/login/')
 
-        # Create the user
         user = User.objects.create_user(
             username=username,
             email=email,
@@ -137,17 +134,14 @@ def test_run(request):
         bot_name = request.POST.get('name').strip()
         bot_file = request.FILES['file']
 
-        # Validate bot name
         if not bot_name:
             messages.error(request, "Bot name cannot be empty")
             return redirect('/deploy_bot/')
 
-        # Check for existing bot names
         if Bot.objects.filter(name=bot_name).exists():
             messages.info(request, "Bot name already taken!")
             return redirect('/deploy_bot/')
 
-        # Create new test bot
         try:
             new_test_bot = TestBot.objects.create(
                 user=user,
@@ -158,7 +152,6 @@ def test_run(request):
             messages.error(request, f"Error saving bot file: {str(e)}")
             return redirect('/deploy_bot/')
 
-        # Discover all available bots in bots/ directory
         import glob
         import os
         
@@ -171,26 +164,8 @@ def test_run(request):
             if filename in ['base.py', '__init__.py']:
                 continue
             
-            # Simple name extraction: filename without extension, capitalized or as is
-            # Original code used hardcoded names like "Aggressive", "Always_Call"
-            # We can try to infer a nice name or just use the filename base.
-            # Let's use the filename stem (e.g. 'aggressive_bot') and Title Case it for display if needed,
-            # but for consistency with original hardcoded list, we should try to match if possible.
-            # However, simpler is just to use the filename stem as the name.
+            name = filename.replace('.py', '') 
             
-            # Special case mapping to match old hardcoded names if desired, or just use new naming convention.
-            # Old: "Aggressive" -> bots/aggressive_bot.py
-            # To avoid duplicates if DB has old names, we check.
-            
-            name = filename.replace('.py', '').replace('_', ' ').title().replace(' ', '_') # aggressive_bot -> Aggressive_Bot
-            # Fix specific ones to match original exact strings if we want to be perfect, 
-            # but generic is better for "all bots".
-            # The original names were: "Aggressive", "Always_Call", "Cautious_bot", "Probability_based_bot", "Random_bot"
-            # My generic formatter: "Aggressive_Bot", "Always_Call_Bot", ...
-            # Let's just use the filename as the unique key/name to be safe and simple.
-            name = filename.replace('.py', '') # aggressive_bot
-            
-            # Create/Get TestBot entry
             try:
                 bot, _ = TestBot.objects.get_or_create(
                     user=user,
@@ -203,7 +178,6 @@ def test_run(request):
                 continue
 
         try:
-            # Run Tournament
             best_match, worst_match, metadata = run_tournament(new_test_bot, available_opponents, iterations=10)
             
             if not best_match or not worst_match:
@@ -214,7 +188,6 @@ def test_run(request):
             messages.error(request, f"Error executing match: {str(e)}")
             return redirect('/deploy_bot/')
 
-        # Helper to get TestBot objects for a match result
         def get_match_players(match_info):
             players = [new_test_bot]
             for opp_name in match_info['opponent_names']:
@@ -222,7 +195,6 @@ def test_run(request):
                     players.append(test_bot_objects[opp_name])
             return players
 
-        # Create match record for Best Match
         try:
             best_players = get_match_players(best_match)
             best_test_match = TestMatch.objects.create(
@@ -232,7 +204,6 @@ def test_run(request):
             )
             best_test_match.players.set(best_players)
             
-            # Create match record for Worst Match
             worst_players = get_match_players(worst_match)
             worst_test_match = TestMatch.objects.create(
                 winner=worst_match['winner'],
@@ -346,11 +317,9 @@ def admin_panel(request):
         return redirect('home')
 
     if request.method == 'POST':
-        # Get selected bots from form
         selected_bot_ids = request.POST.getlist('bots')
         selected_bots = Bot.objects.filter(id__in=selected_bot_ids)
         
-        # Validate selection
         if len(selected_bots) < 2:
             messages.error(request, "Please select at least 2 bots.")
             return redirect('admin_panel')
@@ -362,20 +331,17 @@ def admin_panel(request):
 
         result = play_match(bot_paths,selected_bots)
         
-        # Handle errors from play_match
-        if isinstance(result[0], list):  # Error case
+        if isinstance(result[0], list):
             for error in result[0]:
                 messages.error(request, error)
             return redirect('admin_panel')
         
-        # Unpack normal results
         winner_name,rounds_data = result
 
         if(rounds_data==None):
             return JsonResponse({"Error":winner_name})
 
         try:            
-            # Create match record
             match = Match.objects.create(
                 winner=winner_name,
                 rounds_data=rounds_data
@@ -387,7 +353,6 @@ def admin_panel(request):
 
         return redirect('admin_panel')
 
-    # GET request - show all bots and recent matches
     all_bots = Bot.objects.all().order_by('name')
     recent_matches = Match.objects.all().order_by('-played_at')[:10]
 

@@ -2,7 +2,6 @@ from bots.base import CountingBot
 
 class Bot(CountingBot):
     def declare_action(self, valid_actions, hole_card, round_state):
-        # Always chooses "raise" if available
         action = next(
             action for action in valid_actions if action["action"] == "raise")
         amount = action.get("amount")
