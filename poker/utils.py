@@ -186,7 +186,8 @@ def play_match(bot_paths, bots):
                 'actions': actions,
                 'communitycards': communitycards,
                 'chips_exchanged': chips_exchanged,
-                'winner': winner
+                'winner': winner,
+                'stacks': stacks_array
             })
 
     # Determine match winner
@@ -364,7 +365,8 @@ def play_test_match(bot_paths, bots):
                 'actions': actions,
                 'communitycards': communitycards,
                 'chips_exchanged': chips_exchanged,
-                'winner': winner
+                'winner': winner,
+                'stacks': stacks_array
             })
 
     # Determine match winner
