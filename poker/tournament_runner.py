@@ -40,7 +40,7 @@ def run_tournament(user_bot, all_possible_opponents, iterations=100):
         if not all(checks):
              continue
 
-        config = setup_config(max_round=50, initial_stack=10000, small_blind_amount=250)
+        config = setup_config(max_round=5, initial_stack=10000, small_blind_amount=250)
         for bot_info, instance in zip(current_match_bots, bot_instances):
             config.register_player(name=bot_info['name'], algorithm=instance)
 
