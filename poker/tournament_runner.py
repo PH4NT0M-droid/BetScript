@@ -23,7 +23,7 @@ def run_single_match(args):
             return None # Skip if bot fails to load
         bot_instances.append(instance)
 
-    config = setup_config(max_round=75, initial_stack=10000, small_blind_amount=250)
+    config = setup_config(max_round=10, initial_stack=10000, small_blind_amount=250)
     for bot_info, instance in zip(current_match_bots, bot_instances):
         config.register_player(name=bot_info['name'], algorithm=instance)
 
@@ -138,9 +138,13 @@ def run_tournament(user_bot, builtin_opponents, permanent_opponents, iterations=
         match_args.append((i, user_bot_info, selected_opponents))
 
     num_processes = max(1, cpu_count() - 1)
-    
-    with Pool(processes=num_processes) as pool:
-        results = pool.map(run_single_match, match_args)
+
+    results = []
+    for i in range (0, len(match_args)): 
+        results.append(run_single_match(match_args[i]))
+        
+    # with Pool(processes=num_processes) as pool:
+    #     results = pool.map(run_single_match, match_args)
 
     all_matches_metadata = [r for r in results if r is not None]
     
